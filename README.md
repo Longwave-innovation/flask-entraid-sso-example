@@ -96,7 +96,7 @@ Edit `app.py` and update the configuration constants at the top of the file:
 TENANT_ID = "your-actual-tenant-id"
 CLIENT_ID = "your-actual-client-id"
 CLIENT_SECRET = "your-actual-client-secret"
-CALLBACK_PATH = "/login/callback"  # Change callback path if needed
+CALLBACK_PATH = "/login/callback"          # Change callback path if needed
 LOGIN_PATH = "/login"                      # Change login path if needed
 PORT = 8080                                # Change port if needed
 ```
