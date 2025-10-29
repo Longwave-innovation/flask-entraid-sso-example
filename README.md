@@ -147,6 +147,7 @@ python3 run.py
 ## Usage
 
 1. **Start the application:**
+
    ```cmd
    python run.py
    ```
@@ -172,14 +173,18 @@ python3 run.py
 
 The application retrieves user information through Microsoft Graph API calls:
 
+> All api call can be seen in details in the [auth.py](/app/auth.py) file.
+
 ### User Profile Data (`/me` endpoint)
 
 **API Call:** `GET https://graph.microsoft.com/v1.0/me`
 
 **Required Permissions:**
+
 - `User.Read` - Allows reading the signed-in user's profile
 
 **Data Retrieved:**
+
 - User principal name (email)
 - Display name
 - Job title
@@ -193,9 +198,11 @@ The application retrieves user information through Microsoft Graph API calls:
 **API Call:** `GET https://graph.microsoft.com/v1.0/me/memberOf`
 
 **Required Permissions:**
+
 - `GroupMember.Read.All` - Allows reading group memberships
 
 **Data Retrieved:**
+
 - Security groups
 - Distribution groups
 - Microsoft 365 groups
