@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flask Entra ID SSO</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Flask Entra ID SSO Example</h1>
+        {% if user_data %}
+            <button onclick="location.href='/logout'" class="btn btn-logout">Logout</button>
+            <div class="user-data copyable">
+                <h3>User Information:</h3>
+                <pre>{{ user_data | tojson(indent=2) }}</pre>
+            </div>
+            {% if user_groups %}
+            <div class="user-data copyable">
+                <h3>Group Memberships:</h3>
+                <pre>{{ user_groups | tojson(indent=2) }}</pre>
+            </div>
+            {% endif %}
+        {% else %}
+            <button onclick="location.href='/login'" class="btn btn-login">Login with Microsoft</button>
+        {% endif %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.copyable').forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const text = this.querySelector('pre').textContent;
+                    navigator.clipboard.writeText(text);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

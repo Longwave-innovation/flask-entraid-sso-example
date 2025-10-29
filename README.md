@@ -7,9 +7,13 @@
   - [1. Create and Activate Virtual Environment](#1-create-and-activate-virtual-environment)
   - [2. Install Dependencies](#2-install-dependencies)
   - [3. Configure Entra ID Application](#3-configure-entra-id-application)
-  - [4. Update Configuration](#4-update-configuration)
+  - [4. Update Environment Configuration](#4-update-environment-configuration)
   - [5. Run the Application](#5-run-the-application)
 - [Usage](#usage)
+- [Getting User Info](#getting-user-info)
+  - [User Profile Data (`/me` endpoint)](#user-profile-data-me-endpoint)
+  - [Group Memberships (`/me/memberOf` endpoint)](#group-memberships-mememberof-endpoint)
+  - [Authentication Flow](#authentication-flow)
 - [Deactivate Virtual Environment](#deactivate-virtual-environment)
 - [Troubleshooting](#troubleshooting)
 - [DISCLAIMER](#disclaimer)
@@ -68,70 +72,150 @@ source venv/bin/activate
 **Windows:**
 
 ```cmd
-pip install flask requests
+pip install -r requirements.txt
 ```
 
 **Linux/macOS:**
 
 ```bash
-pip install flask requests
+pip install -r requirements.txt
 ```
 
 ### 3. Configure Entra ID Application
 
 1. Go to [Azure Portal](https://portal.azure.com) > Entra ID > App registrations
 2. Create a new application registration
-3. Add redirect URI: `http://localhost:8080/login/callback` (or adjust based on your PORT setting)
+3. Add redirect URI: `http://localhost:8080/login/callback` (or adjust based on your HOST and POST settings)
 4. Note down:
    - Tenant ID
    - Client ID
-   - Client Secret (create one in "Certificates & secrets")
+5. Create a Client Secret, from "Overview" -> "Add a certificate or secret" -> "New client secret". Beware of choosing an appropriate expiration period
+6. Ensure that the following Microsoft Graph API permissions are set:
+   - `User.Read` - enable the read of the user attributes
+7. From "Enterprise Apps" find your app and in "Properties" mark "Yes" on "Require assignment", this ensure that users that aren't assigned to the app cannot login through it
+8. In the same view click on "Users & Groups" and then add users or group to this app
+9. Done
 
-### 4. Update Configuration
+### 4. Update Environment Configuration
 
-Edit `app.py` and update the configuration constants at the top of the file:
+1. **Copy the environment template:**
 
-```python
-# Configuration - Edit these values
-TENANT_ID = "your-actual-tenant-id"
-CLIENT_ID = "your-actual-client-id"
-CLIENT_SECRET = "your-actual-client-secret"
-CALLBACK_PATH = "/login/callback"          # Change callback path if needed
-LOGIN_PATH = "/login"                      # Change login path if needed
-PORT = 8080                                # Change port if needed
-```
+   ```cmd
+   copy .env.example .env
+   ```
 
-**Configuration Options:**
+2. **Edit the `.env` file with your actual values:**
 
-- `TENANT_ID`: Your Entra ID tenant ID
-- `CLIENT_ID`: Your application's client ID
+   ```env
+   SECRET_KEY=your-secret-key-here
+   TENANT_ID=your-actual-tenant-id
+   CLIENT_ID=your-actual-client-id
+   CLIENT_SECRET=your-actual-client-secret
+   HOST=http://localhost
+   PORT=8080
+   CALLBACK_PATH=/login/callback
+   LOGIN_PATH=/login
+   ```
+
+**Environment Variables:**
+
+- `SECRET_KEY`: Flask session secret (auto-generated if not set)
+- `TENANT_ID`: Your Entra ID tenant ID from Azure Portal
+- `CLIENT_ID`: Your application's client ID from app registration
 - `CLIENT_SECRET`: Your application's client secret
-- `CALLBACK_PATH`: The callback endpoint path (default: `/login/callback`)
-- `LOGIN_PATH`: The login endpoint path (default: `/login`)
-- `PORT`: The port the Flask server runs on (default: `8080`)
+- `HOST`: Hostname for the application (default: `http://localhost`)
+- `PORT`: Port number for the Flask server (default: 8080)
+- `CALLBACK_PATH`: OAuth callback endpoint path (default: /login/callback)
+- `LOGIN_PATH`: Login endpoint path (default: /login)
+
+**Note:** The `.env` file is automatically loaded when the application starts. Never commit this file to version control as it contains sensitive information.
 
 ### 5. Run the Application
 
 **Windows:**
 
 ```cmd
-python app.py
+python run.py
 ```
 
 **Linux/macOS:**
 
 ```bash
-python3 app.py
+python3 run.py
 ```
 
 ## Usage
 
-1. Start the Flask server (it will run on `http://localhost:8080` by default)
-2. Open your browser and go to `http://localhost:8080/login` (or your configured LOGIN_PATH)
-3. You'll be redirected to Microsoft login page
-4. After successful authentication, you'll see your user information as JSON
+1. **Start the application:**
+   ```cmd
+   python run.py
+   ```
 
-**Note:** The URLs will change based on your PORT and path configurations in the constants.
+2. **Open your browser** and navigate to `http://localhost:8080` (or your configured HOST:PORT)
+
+3. **Login Process:**
+   - Click the "Login with Microsoft" button
+   - You'll be redirected to Microsoft's login page
+   - Enter your credentials and complete any required MFA
+   - After successful authentication, you'll be redirected back to the app
+
+4. **View Information:**
+   - **User Information**: Displays your profile data (name, email, etc.)
+   - **Group Memberships**: Shows all groups you're a member of
+   - **Copy Feature**: Click on any information box to copy the JSON data to your clipboard
+
+5. **Logout:**
+   - Click the "Logout" button to sign out
+   - This will clear your session and redirect to Microsoft's logout page
+
+## Getting User Info
+
+The application retrieves user information through Microsoft Graph API calls:
+
+### User Profile Data (`/me` endpoint)
+
+**API Call:** `GET https://graph.microsoft.com/v1.0/me`
+
+**Required Permissions:**
+- `User.Read` - Allows reading the signed-in user's profile
+
+**Data Retrieved:**
+- User principal name (email)
+- Display name
+- Job title
+- Department
+- Office location
+- Phone numbers
+- And other profile attributes
+
+### Group Memberships (`/me/memberOf` endpoint)
+
+**API Call:** `GET https://graph.microsoft.com/v1.0/me/memberOf`
+
+**Required Permissions:**
+- `GroupMember.Read.All` - Allows reading group memberships
+
+**Data Retrieved:**
+- Security groups
+- Distribution groups
+- Microsoft 365 groups
+- Administrative units
+- Directory roles
+
+### Authentication Flow
+
+1. **OAuth2 Authorization Code Flow:**
+   - User is redirected to Entra ID with scopes: `openid profile email User.Read GroupMember.Read.All`
+   - After authentication, an authorization code is returned
+   - The code is exchanged for an access token
+   - The access token is used to make Graph API calls
+
+2. **Token Usage:**
+   - Access token is included in the `Authorization: Bearer {token}` header
+   - Both `/me` and `/me/memberOf` calls use the same token
+   - Token permissions are determined by the scopes requested during authentication
+
+**Note:** Ensure your Entra ID application has the required API permissions (`User.Read` and `GroupMember.Read.All`) configured and admin consent granted.
 
 ## Deactivate Virtual Environment
 
