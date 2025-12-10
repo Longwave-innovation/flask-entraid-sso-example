@@ -91,7 +91,11 @@ pip install -r requirements.txt
    - Client ID
 5. Create a Client Secret, from "Overview" -> "Add a certificate or secret" -> "New client secret". Beware of choosing an appropriate expiration period
 6. Ensure that the following Microsoft Graph API permissions are set:
-   - `User.Read` - enable the read of the user attributes
+   - `User.Read` - Allows reading the signed-in user's profile information (name, email, job title, etc.)
+   - `openid` - Enables OpenID Connect authentication flow
+   - `profile` - Grants access to user's basic profile claims (name, preferred username)
+   - `email` - Provides access to the user's email address
+   - `GroupMember.Read.All` - Allows reading the user's group memberships (requires Entra ID admin consent)
 7. From "Enterprise Apps" find your app and in "Properties" mark "Yes" on "Require assignment", this ensure that users that aren't assigned to the app cannot login through it
 8. In the same view click on "Users & Groups" and then add users or group to this app
 9. Done
