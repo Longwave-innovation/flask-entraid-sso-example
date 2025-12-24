@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Flask Entra ID SSO</title>
+    <title>Flask SSO</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Flask Entra ID SSO Example</h1>
+        <h1>Flask SSO Example</h1>
         {% if user_data %}
             <button onclick="location.href='/logout'" class="btn btn-logout">Logout</button>
             <div class="user-data copyable">
@@ -20,7 +20,7 @@
             </div>
             {% endif %}
         {% else %}
-            <button onclick="location.href='/login'" class="btn btn-login">Login with Microsoft</button>
+            <button onclick="location.href='/login'" class="btn btn-login">Login with SSO</button>
         {% endif %}
     </div>
     <script>

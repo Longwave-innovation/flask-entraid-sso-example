@@ -1,0 +1,71 @@
+services:
+  flask-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flask-sso
+    image: flask-sso:latest
+    
+    # Port mapping - host:container
+    ports:
+      - "8080:8080"
+    
+    environment:
+      PORT: 8080
+      # Directly with EntraID
+      # AUTH_PROVIDER: ENTRAID
+      # TENANT_ID: <entraid-app-tenant-id>
+      # CLIENT_ID: <entraid-app-client-id>
+      # CLIENT_SECRET: <entraid-app-client-secret>
+
+      # Cognito Example
+      # AUTH_PROVIDER: COGNITO
+      # COGNITO_DOMAIN: https://<cognito-domain>.auth.<region>.amazoncognito.com
+      # CLIENT_ID: <cognito-app-client-id>
+      # CLIENT_SECRET: <cognito-app-client-secret>
+    # Environment variables from .env file
+    # env_file:
+    #   - .env
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Read-only root filesystem (security hardening)
+    read_only: true
+    
+    # Temporary filesystem for runtime data
+    tmpfs:
+      - /tmp:size=10M,mode=1777
+    
+    # Volumes for logs
+    volumes:
+      - ./logs:/app/logs
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
