@@ -10,16 +10,19 @@
   - [Option 1: Direct Entra ID Authentication](#option-1-direct-entra-id-authentication)
     - [3. Configure Entra ID Application](#3-configure-entra-id-application)
     - [4. Update Environment Configuration](#4-update-environment-configuration)
-    - [5. Run the Application](#5-run-the-application)
   - [Option 2: AWS Cognito with Entra ID as IdP](#option-2-aws-cognito-with-entra-id-as-idp)
     - [3. Configure Entra ID Application for Cognito](#3-configure-entra-id-application-for-cognito)
     - [4. Configure AWS Cognito User Pool](#4-configure-aws-cognito-user-pool)
     - [5. Update Environment Configuration](#5-update-environment-configuration)
-    - [6. Run the Application](#6-run-the-application)
+  - [Option 3: Generic OIDC Provider](#option-3-generic-oidc-provider)
+    - [3. Configure Your OIDC Provider](#3-configure-your-oidc-provider)
+    - [4. OIDC Environment Configuration](#4-oidc-environment-configuration)
+  - [Final - Run the Application](#final---run-the-application)
 - [Usage](#usage)
 - [Getting User Info](#getting-user-info)
   - [Direct Entra ID](#direct-entra-id)
   - [AWS Cognito](#aws-cognito)
+  - [Generic OIDC](#generic-oidc)
 - [Deactivate Virtual Environment](#deactivate-virtual-environment)
 - [Docker](#docker)
   - [Build and Run with Docker](#build-and-run-with-docker)
@@ -28,15 +31,16 @@
 - [Troubleshooting](#troubleshooting)
 - [DISCLAIMER](#disclaimer)
 
-A minimal Flask web application that demonstrates Single Sign-On (SSO) authentication using either Microsoft Entra ID directly or AWS Cognito as an identity provider router. The application handles the OAuth2 authorization code flow and displays user information after successful authentication.
+A minimal Flask web application that demonstrates Single Sign-On (SSO) authentication using Microsoft Entra ID, AWS Cognito, or any OpenID Connect (OIDC) compliant identity provider. The application handles the OAuth2 authorization code flow and displays user information after successful authentication.
 
 ## What This Example Does
 
 This Flask application:
 
-- Supports two authentication methods:
+- Supports three authentication methods:
   1. **Direct Entra ID**: Authenticate directly with Microsoft Entra ID
   2. **AWS Cognito**: Use Cognito as an IdP router with Entra ID as the upstream provider
+  3. **Generic OIDC**: Any OpenID Connect compliant provider (Keycloak, Okta, Auth0, Dex, etc.)
 - Handles the OAuth2 callback at `/login/callback`
 - Exchanges the authorization code for an access token
 - Retrieves user profile information
@@ -48,6 +52,7 @@ This Flask application:
 - Internet connection for authentication
 - **For Option 1**: Microsoft Entra ID application registration
 - **For Option 2**: AWS account with Cognito access + Microsoft Entra ID application registration
+- **For Option 3**: Any OIDC-compliant identity provider
 
 ## Download Python
 
@@ -126,19 +131,13 @@ Edit `.env`:
 
 ```env
 SECRET_KEY=your-secret-key-here
-TENANT_ID=your-actual-tenant-id
-CLIENT_ID=your-actual-client-id
-CLIENT_SECRET=your-actual-client-secret
+TENANT_ID=<your-actual-tenant-id>
+CLIENT_ID=<your-actual-client-id>
+CLIENT_SECRET=<your-actual-client-secret>
 HOST=http://localhost
 PORT=8080
 CALLBACK_PATH=/login/callback
 LOGIN_PATH=/login
-```
-
-#### 5. Run the Application
-
-```bash
-python run.py
 ```
 
 ---
@@ -230,6 +229,7 @@ SECRET_KEY=your-secret-key-here
 TENANT_ID=<cognito-user-pool-id>
 CLIENT_ID=<cognito-app-client-id>
 CLIENT_SECRET=<cognito-app-client-secret>
+COGNITO_CLAIMS='openid profile email'
 HOST=http://localhost
 PORT=8080
 CALLBACK_PATH=/login/callback
@@ -237,7 +237,49 @@ LOGIN_PATH=/login
 COGNITO_DOMAIN=https://<cognito-domain>.auth.<region>.amazoncognito.com
 ```
 
-#### 6. Run the Application
+---
+
+### Option 3: Generic OIDC Provider
+
+#### 3. Configure Your OIDC Provider
+
+1. Create an application/client in your OIDC provider (Keycloak, Okta, Auth0, Dex, etc.)
+2. Add redirect URI: `http://localhost:8080/login/callback`
+3. Note down:
+   - Issuer URL (e.g., `https://keycloak.example.com/realms/myrealm`)
+   - Client ID
+   - Client Secret
+4. Ensure the provider supports OpenID Connect Discovery (`.well-known/openid-configuration` endpoint)
+
+#### 4. OIDC Environment Configuration
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+AUTH_PROVIDER=oidc
+SECRET_KEY=your-secret-key-here
+OIDC_ISSUER=https://your-idp.example.com
+OIDC_SCOPES=openid profile email
+CLIENT_ID=<your-oidc-client-id>
+CLIENT_SECRET=<your-oidc-client-secret>
+HOST=http://localhost
+PORT=8080
+CALLBACK_PATH=/login/callback
+LOGIN_PATH=/login
+```
+
+**Common Issuer URL Examples:**
+
+- Keycloak: `https://keycloak.example.com/realms/myrealm`
+- Okta: `https://dev-123456.okta.com/oauth2/default`
+- Auth0: `https://your-tenant.auth0.com`
+- Dex: `https://dex.example.com`
+
+### Final - Run the Application
 
 **Windows:**
 
@@ -330,6 +372,21 @@ Authorization: Bearer {access_token}
 
 Optionally by default Cognito creates its own group for each IDP it integrates, so you can query Cognito for their values.
 
+---
+
+### Generic OIDC
+
+**User Info Endpoint:**
+
+Automatically discovered from `{OIDC_ISSUER}/.well-known/openid-configuration`
+
+```sh
+GET {userinfo_endpoint}
+Authorization: Bearer {access_token}
+```
+
+**Note:** The application uses OpenID Connect Discovery to automatically find all required endpoints.
+
 ## Deactivate Virtual Environment
 
 **Windows & Linux:**
@@ -379,24 +436,27 @@ docker compose down
 
 ## Environment Variables
 
-| Variable         | Required | Default            | Description                                                        | Used By      |
-| ---------------- | -------- | ------------------ | ------------------------------------------------------------------ | ------------ |
-| `AUTH_PROVIDER`  | No       | `entraid`          | Authentication provider: `entraid` or `cognito`                    | Both         |
-| `CLIENT_ID`      | Yes      | -                  | OAuth2 client ID from Entra ID or Cognito                          | Both         |
-| `CLIENT_SECRET`  | Yes      | -                  | OAuth2 client secret from Entra ID or Cognito                      | Both         |
-| `TENANT_ID`      | Yes*     | -                  | Entra ID tenant ID                                                 | Entraid only |
-| `COGNITO_DOMAIN` | Yes**    | -                  | Cognito domain (e.g., `your-domain.auth.region.amazoncognito.com`) | Cognito only |
-| `COGNITO_REGION` | No       | `eu-south-1`       | AWS region for Cognito                                             | Cognito only |
-| `HOST`           | No       | `http://localhost` | Application host URL                                               | Both         |
-| `PORT`           | No       | `8080`             | Application port number                                            | Both         |
-| `CALLBACK_PATH`  | No       | `/login/callback`  | OAuth2 callback path                                               | Both         |
-| `LOGIN_PATH`     | No       | `/login`           | Login endpoint path                                                | Both         |
-| `SECRET_KEY`     | No       | Auto-generated     | Flask session secret key. Auto-generated if not provided           | Both         |
+| Variable         | Required | Default            | Description                                                        | Used By           |
+| ---------------- | -------- | ------------------ | ------------------------------------------------------------------ | ----------------- |
+| `AUTH_PROVIDER`  | No       | `entraid`          | Authentication provider: `entraid`, `cognito`, or `oidc`           | All               |
+| `CLIENT_ID`      | Yes      | -                  | OAuth2 client ID from your identity provider                       | All               |
+| `CLIENT_SECRET`  | Yes      | -                  | OAuth2 client secret from your identity provider                   | All               |
+| `TENANT_ID`      | Yes*     | -                  | Entra ID tenant ID                                                 | Entraid only      |
+| `COGNITO_DOMAIN` | Yes**    | -                  | Cognito domain (e.g., `your-domain.auth.region.amazoncognito.com`) | Cognito only      |
+| `COGNITO_REGION` | No       | `eu-south-1`       | AWS region for Cognito                                             | Cognito only      |
+| `OIDC_ISSUER`    | Yes***   | -                  | OIDC issuer URL (e.g., `https://idp.example.com`)                  | OIDC only         |
+| `OIDC_SCOPES`    | No       | `openid profile email` | OAuth2 scopes to request                                       | OIDC only         |
+| `HOST`           | No       | `http://localhost` | Application host URL                                               | All               |
+| `PORT`           | No       | `8080`             | Application port number                                            | All               |
+| `CALLBACK_PATH`  | No       | `/login/callback`  | OAuth2 callback path                                               | All               |
+| `LOGIN_PATH`     | No       | `/login`           | Login endpoint path                                                | All               |
+| `SECRET_KEY`     | No       | Auto-generated     | Flask session secret key. Auto-generated if not provided           | All               |
 
 **Notes:**
 
 - `*` Required for Entra ID as tenant ID, required for Cognito as User Pool ID
 - `**` Required only when `AUTH_PROVIDER=cognito`
+- `***` Required only when `AUTH_PROVIDER=oidc`
 - `REDIRECT_URI` and `LOGOUT_URI` are computed automatically from `HOST`, `PORT`, and `CALLBACK_PATH`
 
 ## Troubleshooting

@@ -22,6 +22,17 @@ class Config:
     # Ensure COGNITO_DOMAIN has protocol
     COGNITO_DOMAIN = _cognito_domain if _cognito_domain.startswith(('http://', 'https://')) else f"https://{_cognito_domain}" if _cognito_domain else None
     COGNITO_REGION = os.getenv('COGNITO_REGION', 'eu-south-1')
+    COGNITO_CLAIMS = os.getenv('COGNITO_CLAIMS', 'openid profile email')
+    
+    # Generic OIDC Configuration (when AUTH_PROVIDER=oidc)
+    # Uses OpenID Connect Discovery 1.0 - only OIDC_ISSUER is required
+    # All endpoints are auto-discovered from {OIDC_ISSUER}/.well-known/openid-configuration
+    # Example issuers:
+    #   - Keycloak: https://keycloak.example.com/realms/myrealm
+    #   - Okta: https://dev-123456.okta.com/oauth2/default
+    #   - Auth0: https://your-tenant.auth0.com
+    OIDC_ISSUER = os.getenv('OIDC_ISSUER')  # e.g., https://idp.example.com
+    OIDC_SCOPES = os.getenv('OIDC_SCOPES', 'openid profile email groups')
     
     # App Configuration
     HOST = os.getenv('HOST', 'http://localhost')

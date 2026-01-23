@@ -32,7 +32,7 @@ def callback():
     # Exchange code for token
     token_data = exchange_code_for_token(code)
     
-    # current_app.logger.info(f'Token exchange response: {json.dumps(token_data, indent=4)}')
+    current_app.logger.info(f'Token exchange response: {json.dumps(token_data, indent=4)}')
     
     if 'access_token' not in token_data:
         current_app.logger.error(f'Token exchange failed: {token_data}')

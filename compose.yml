@@ -12,18 +12,32 @@ services:
     
     environment:
       PORT: 8080
+      # See .env.example for detailed configuration options
+      
       # Directly with EntraID
-      # AUTH_PROVIDER: ENTRAID
+      # AUTH_PROVIDER: entraid
       # TENANT_ID: <entraid-app-tenant-id>
       # CLIENT_ID: <entraid-app-client-id>
       # CLIENT_SECRET: <entraid-app-client-secret>
 
       # Cognito Example
-      # AUTH_PROVIDER: COGNITO
+      # AUTH_PROVIDER: cognito
       # COGNITO_DOMAIN: https://<cognito-domain>.auth.<region>.amazoncognito.com
       # CLIENT_ID: <cognito-app-client-id>
       # CLIENT_SECRET: <cognito-app-client-secret>
-    # Environment variables from .env file
+      # COGNITO_CLAIMS: openid profile email groups
+      
+      # Generic OIDC (Keycloak, Okta, Auth0, Dex, etc.)
+      # Uses OpenID Connect Discovery - only issuer URL required
+      # AUTH_PROVIDER: oidc
+      # OIDC_ISSUER: https://your-idp.example.com
+      # OIDC_SCOPES: openid profile email groups
+      # CLIENT_ID: your-oidc-client-id
+      # CLIENT_SECRET: your-oidc-client-secret
+
+    
+    # Alternative: Load all variables from .env file
+    # See .env.example for all available options
     # env_file:
     #   - .env
     
