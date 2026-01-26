@@ -51,7 +51,8 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONFAULTHANDLER=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PORT=8080
 
 # Copy application code with proper ownership
 COPY --chown=appuser:appuser . .
@@ -64,19 +65,13 @@ RUN chmod -R 555 /app && \
 USER appuser
 
 # Expose application port
-EXPOSE 8080
+EXPOSE ${PORT}
 
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.getenv(\"PORT\", \"8080\")}/').read()" || exit 1
 
 # Production-ready WSGI server with Gunicorn
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:8080", \
-     "--workers", "2", \
-     "--threads", "4", \
-     "--timeout", "60", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info", \
-     "run:app"]
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["gunicorn --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile - --log-level info run:app"]
+

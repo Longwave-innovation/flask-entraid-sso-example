@@ -1,0 +1,176 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_RELATIVE_PATH: /auth
+    command:
+      - start-dev
+      - --import-realm
+    configs:
+      - source: keycloak_realm
+        target: /opt/keycloak/data/import/realm.json
+    restart: unless-stopped
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.41.1
+    container_name: dex
+    depends_on:
+      - keycloak
+    ports:
+      - "5556:5556"
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    configs:
+      - source: dex_config
+        target: /etc/dex/config.yaml
+    restart: unless-stopped
+
+  flask-app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: flask-sso
+    image: flask-sso:latest
+    depends_on:
+      - dex
+    
+    ports:
+      - "8081:8081"
+    
+    environment:
+      PORT: 8081
+      HOST: http://localhost
+      AUTH_PROVIDER: oidc
+      OIDC_ISSUER: http://dex:5556/dex
+      OIDC_SCOPES: openid profile email
+      CLIENT_ID: flask-app
+      CLIENT_SECRET: flask-app-secret
+    
+    # Alternative: Load all variables from .env file
+    # env_file:
+    #   - .env
+    
+    security_opt:
+      - no-new-privileges:true
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    restart: unless-stopped
+    read_only: true
+    
+    tmpfs:
+      - /tmp:size=10M,mode=1777
+    
+    volumes:
+      - ./logs:/app/logs
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+configs:
+  keycloak_realm:
+    content: |
+      {
+        "realm": "test",
+        "enabled": true,
+        "users": [
+          {
+            "username": "testuser",
+            "enabled": true,
+            "email": "testuser@example.com",
+            "firstName": "Test",
+            "lastName": "User",
+            "credentials": [{"type": "password", "value": "password", "temporary": false}],
+            "groups": ["/developers"]
+          }
+        ],
+        "groups": [
+          {"name": "developers", "path": "/developers"}
+        ],
+        "clients": [
+          {
+            "clientId": "dex-client",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "kcKW0yRsynICMZDdQQLaTRpkQqMtbrPc",
+            "redirectUris": ["http://dex:5556/dex/callback"],
+            "webOrigins": ["*"],
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": true,
+            "fullScopeAllowed": true,
+            "protocolMappers": [
+              {
+                "name": "groups",
+                "protocol": "openid-connect",
+                "protocolMapper": "oidc-group-membership-mapper",
+                "consentRequired": false,
+                "config": {
+                  "full.path": "false",
+                  "id.token.claim": "true",
+                  "access.token.claim": "true",
+                  "claim.name": "groups",
+                  "userinfo.token.claim": "true"
+                }
+              }
+            ]
+          }
+        ]
+      }
+  dex_config:
+    content: |
+      issuer: http://dex:5556/dex
+      storage:
+        type: memory
+      web:
+        http: 0.0.0.0:5556
+      oauth2:
+        skipApprovalScreen: true
+        
+      logger:
+        level: "debug"
+        format: "json"
+
+      connectors:
+      - type: oidc
+        id: keycloak
+        name: Keycloak Local
+        config:
+          issuer: http://keycloak:8080/auth/realms/test
+          clientID: dex-client
+          clientSecret: kcKW0yRsynICMZDdQQLaTRpkQqMtbrPc
+          redirectURI: http://dex:5556/dex/callback
+          insecureSkipEmailVerified: true
+          insecureEnableGroups: true
+          scopes:
+            - openid
+            - profile
+            - email
+      staticClients:
+      - id: flask-app
+        secret: flask-app-secret
+        name: Flask SSO App
+        redirectURIs:
+          - http://localhost:8081/login/callback
