@@ -28,6 +28,7 @@
   - [Build and Run with Docker](#build-and-run-with-docker)
   - [Docker Compose](#docker-compose)
 - [Environment Variables](#environment-variables)
+- [Available Examples](#available-examples)
 - [Troubleshooting](#troubleshooting)
 - [DISCLAIMER](#disclaimer)
 
@@ -458,6 +459,10 @@ docker compose down
 - `**` Required only when `AUTH_PROVIDER=cognito`
 - `***` Required only when `AUTH_PROVIDER=oidc`
 - `REDIRECT_URI` and `LOGOUT_URI` are computed automatically from `HOST`, `PORT`, and `CALLBACK_PATH`
+
+## Available Examples
+
+- [Keycloak - Dex - SSO](./examples/dex-local/READmE.md)
 
 ## Troubleshooting
 
