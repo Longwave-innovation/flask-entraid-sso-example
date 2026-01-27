@@ -46,7 +46,7 @@ services:
       HOST: http://localhost
       AUTH_PROVIDER: oidc
       OIDC_ISSUER: http://dex:5556/dex
-      OIDC_SCOPES: openid profile email
+      OIDC_SCOPES: openid profile email groups
       CLIENT_ID: flask-app
       CLIENT_SECRET: flask-app-secret
     
@@ -168,6 +168,8 @@ configs:
             - openid
             - profile
             - email
+          # claimMapping:
+          #   groups: user-groups
       staticClients:
       - id: flask-app
         secret: flask-app-secret
